@@ -197,7 +197,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
             if (postPwd === userPwd) {
               const jwtToken = jwt.sign(
                 {
-                  userId: _id,
+                  _id,
                   userName,
                   isAdmin,
                 },
@@ -207,7 +207,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
 
               new Result(
                 {
-                  userId: _id,
+                  _id,
                   userName,
                   isAdmin,
                 },
@@ -379,10 +379,20 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   });
 
   /* 第一次验证码登录更新信息 */
-  router.post("/user/first-update", (req, res) => {
-    // console.log('req.cookies.jwtToken:==', req.cookies.jwtToken);
-    res.clearCookie("jwtToken");
-    new Result("登出成功").success(res);
+  router.post("/user/improveUserInfo", (req, res) => {
+    try {
+      const { userName, userPwd, _id, email } = req.body;
+      console.log(userName, userPwd, _id);
+
+      updateDocOne(NormalUserTable, { _id, email }, { userName, userPwd }).then(
+        (updateResInfo) => {
+          console.log("完善=======", updateResInfo);
+          new Result({ _id, userName }, "完善成功").success(res);
+        }
+      );
+    } catch (err) {
+      new Result(err, "完善错误").fail(err);
+    }
   });
 
   /* 验证普通用户 */

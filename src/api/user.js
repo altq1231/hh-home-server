@@ -30,9 +30,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
         if (respAdminInfoArray.length > 0) {
           // console.log("respAdminInfoArray[0]", respAdminInfoArray[0]);
           const temp = {
-            userName: base64url.decode(respAdminInfoArray[0].userName),
-            userPwd: base64url.decode(respAdminInfoArray[0].userPwd),
-            userDesc: base64url.decode(respAdminInfoArray[0].userDesc),
+            userName: respAdminInfoArray[0].userName,
+            userPwd: respAdminInfoArray[0].userPwd,
+            userDesc: respAdminInfoArray[0].userDesc,
             _id: respCreatedAdmin._id,
             email: respAdminInfoArray[0].email,
             isAdmin: respAdminInfoArray[0].isAdmin,
@@ -42,16 +42,16 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
         } else {
           /* create it */
           insertDoc(NormalUserTable, {
-            userName: base64url.encode(DEFAULT_ADMIN_ACCOUNT.adminName),
-            userPwd: base64url.encode(DEFAULT_ADMIN_ACCOUNT.adminPwd),
-            userDesc: base64url.encode("管理员账户用于创建模板"),
+            userName: DEFAULT_ADMIN_ACCOUNT.adminName,
+            userPwd: DEFAULT_ADMIN_ACCOUNT.adminPwd,
+            userDesc: "管理员账户用于创建模板",
             email: "2783956045@qq.com",
             isAdmin: true,
           }).then((respCreatedAdmin) => {
             const temp = {
-              userName: base64url.decode(respCreatedAdmin.userName),
-              userPwd: base64url.decode(respCreatedAdmin.userPwd),
-              userDesc: base64url.decode(respCreatedAdmin.userDesc),
+              userName: respCreatedAdmin.userName,
+              userPwd: respCreatedAdmin.userPwd,
+              userDesc: respCreatedAdmin.userDesc,
               email: "2783956045@qq.com",
               _id: respCreatedAdmin._id,
               isAdmin: true,
@@ -68,22 +68,90 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   });
 
   /* 创建普通用户 */
-  router.post("/user/createNormalUser", async (req, res) => {
+  router.post("/user/register", async (req, res) => {
     try {
-      const { userName, userPwd, userDesc, email } = req.body;
-      const userInfo = {
-        userName: base64url.encode(userName),
-        userPwd: base64url.encode(userPwd),
-        userDesc: base64url.encode(userDesc),
-        email: email,
-        isAdmin: false,
-      };
-      const respNorUser = await insertDoc(NormalUserTable, userInfo);
-      const respNorUserData = Object.assign({}, userInfo, {
-        _id: respNorUser._id,
-      });
+      const {
+        userName,
+        userPwd,
+        userDesc = "普通用户",
+        email,
+        code,
+      } = req.body;
+      const reg = new RegExp(userName, "i");
+      const regEmail = new RegExp(email, "i"); //不区分大小写
 
-      new Result(respNorUserData, "添加普通用户成功").success(res);
+      const codeRes = await findDoc(CaptchaTable, { email: email });
+      const nowT = moment();
+      console.log(nowT.valueOf(), code, codeRes[0], code === codeRes[0].code);
+      if (nowT.valueOf() > codeRes[0].failureTime) {
+        new Result("验证码过期").fail(res);
+      } else {
+        if (Number(code) === codeRes[0].code) {
+          const temp = {
+            failureTime: moment(),
+          };
+          // console.log("update---------", userRes);
+          updateDocOne(CaptchaTable, { email }, temp)
+            .then(() => {
+              findDoc(NormalUserTable, {
+                $or: [
+                  //多条件，数组
+                  { userName: { $regex: reg } },
+                  { email: { $regex: regEmail } },
+                ],
+              }).then((respUserArray) => {
+                if (respUserArray.length > 0) {
+                  const userInfo = {
+                    userName: userName,
+                    userPwd: userPwd,
+                    userDesc: userDesc,
+                    email: email,
+                    isAdmin: respUserArray[0].isAdmin,
+                  };
+                  updateDocOne(
+                    NormalUserTable,
+                    { _id: respUserArray[0]._id },
+                    userInfo
+                  ).then(() => {
+                    new Result(
+                      {
+                        userName,
+                        userPwd,
+                        userDesc,
+                        email,
+                        isAdmin: respUserArray[0].isAdmin,
+                        _id: respUserArray[0]._id,
+                      },
+                      "更新用户信息成功"
+                    ).success(res);
+                  });
+                } else {
+                  const userInfo = {
+                    userName: userName,
+                    userPwd: userPwd,
+                    userDesc: userDesc,
+                    email: email,
+                    isAdmin: false,
+                  };
+                  insertDoc(NormalUserTable, userInfo).then(
+                    (respCreatedUser) => {
+                      // console.log(respCreatedUser);
+                      userInfo._id = respCreatedUser._id;
+                      // console.log("插入普通用户信息成功 ==", userInfo);
+                      new Result(userInfo, "注册成功").success(res);
+                    }
+                  );
+                }
+              });
+            })
+            .catch((err) => {
+              console.error("过期验证码 error:==", err);
+              new Result("验证码错误").fail(res);
+            });
+        } else {
+          new Result("验证码错误").fail(res);
+        }
+      }
     } catch (err) {
       console.error("createNormalUser error:==", err);
 
@@ -98,9 +166,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
       .then((allUser) => {
         const temp = allUser.map((item) => {
           let user = {};
-          user.userName = base64url.decode(item.userName);
-          user.userPwd = base64url.decode(item.userPwd);
-          user.userDesc = base64url.decode(item.userDesc);
+          user.userName = item.userName;
+          user.userPwd = item.userPwd;
+          user.userDesc = item.userDesc;
           return user;
         });
         console.log("获取所有用户 ==", temp);
@@ -118,8 +186,8 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
     // console.log("login", req.body.userName);
     if (req.body.userName && req.body.userPwd) {
       const { userName, userPwd } = req.body;
-      const postName = base64url.encode(userName);
-      const postPwd = base64url.encode(userPwd);
+      const postName = userName;
+      const postPwd = userPwd;
       /* get user info from db */
       findDoc(NormalUserTable, { userName: postName })
         .then((respUserArray) => {
@@ -178,16 +246,14 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
           const temp = {
             failureTime: moment(),
           };
-          96;
           // console.log("update---------", userRes);
           updateDocOne(CaptchaTable, { email }, temp)
             .then(() => {
               if (userRes.length > 0) {
                 // console.log("updateDocOne", respCaptchaArray);
                 const { userName, isAdmin, _id } = userRes[0];
-                const postName = base64url.decode(userName);
                 new Result(
-                  { userName: postName, isAdmin, _id },
+                  { userName: userName, isAdmin, _id },
                   "登录成功"
                 ).success(res);
               } else {
@@ -314,9 +380,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
       // console.log('modifyNormalUser req.body:==', req.body);
       const { userName, userPwd, userDesc, _id } = req.body;
       const userInfo = {
-        userName: base64url.encode(userName),
-        userPwd: base64url.encode(userPwd),
-        userDesc: base64url.encode(userDesc),
+        userName: userName,
+        userPwd: userPwd,
+        userDesc: userDesc,
       };
       await updateDocById(NormalUserTable, { _id }, userInfo);
 

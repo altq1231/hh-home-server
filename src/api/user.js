@@ -2,13 +2,15 @@ const jwt = require("jsonwebtoken");
 const jwtSalt = "blog";
 const base64url = require("base64url");
 const Result = require("./status-handle.js");
+const moment = require("moment");
 
-const Captcha = require("../utils/captcha");
+const sendCode = require("../utils/captcha");
 
 const {
   insertDoc,
   findDoc,
   updateDocById,
+  updateDocOne,
   // removeDocById,
 } = require("../mongodb/method.js");
 
@@ -17,43 +19,45 @@ const DEFAULT_ADMIN_ACCOUNT = {
   adminPwd: "admin",
 };
 
-module.exports = (router, mongodbConnection, NormalUserTable) => {
+module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   /* 获取管理员 */
-  router.get("/user/getAdmin", async (req, res) => {
+  router.get("/user/getAdmin", (req, res) => {
     try {
-      const respAdminInfoArray = await findDoc(NormalUserTable, {
+      findDoc(NormalUserTable, {
         isAdmin: true,
+      }).then((respAdminInfoArray) => {
+        /* if admin account exist then response it */
+        if (respAdminInfoArray.length > 0) {
+          // console.log("respAdminInfoArray[0]", respAdminInfoArray[0]);
+          const temp = {
+            userName: base64url.decode(respAdminInfoArray[0].userName),
+            userPwd: base64url.decode(respAdminInfoArray[0].userPwd),
+            userDesc: base64url.decode(respAdminInfoArray[0].userDesc),
+            email: respAdminInfoArray[0].email,
+            isAdmin: respAdminInfoArray[0].isAdmin,
+          };
+          new Result(temp, "获取管理员信息成功").success(res);
+        } else {
+          /* create it */
+          insertDoc(NormalUserTable, {
+            userName: base64url.encode(DEFAULT_ADMIN_ACCOUNT.adminName),
+            userPwd: base64url.encode(DEFAULT_ADMIN_ACCOUNT.adminPwd),
+            userDesc: base64url.encode("管理员账户用于创建模板"),
+            email: "2783956045@qq.com",
+            isAdmin: true,
+          }).then((respCreatedAdmin) => {
+            const temp = {
+              userName: base64url.decode(respCreatedAdmin.userName),
+              userPwd: base64url.decode(respCreatedAdmin.userPwd),
+              userDesc: base64url.decode(respCreatedAdmin.userDesc),
+              email: "2783956045@qq.com",
+              isAdmin: true,
+            };
+            console.log("获取管理员信息成功 ==", temp);
+            new Result(temp, "获取管理员信息成功").success(res);
+          });
+        }
       });
-      /* if admin account exist then response it */
-      if (respAdminInfoArray.length > 0) {
-        // console.log("respAdminInfoArray[0]", respAdminInfoArray[0]);
-        const temp = {
-          userName: base64url.decode(respAdminInfoArray[0].userName),
-          userPwd: base64url.decode(respAdminInfoArray[0].userPwd),
-          userDesc: base64url.decode(respAdminInfoArray[0].userDesc),
-          isAdmin: respAdminInfoArray[0].isAdmin,
-        };
-        new Result(temp, "获取管理员信息成功").success(res);
-      } else {
-        /* create it */
-        const respCreatedAdmin = await insertDoc(NormalUserTable, {
-          userName: base64url.encode(DEFAULT_ADMIN_ACCOUNT.adminName),
-          userPwd: base64url.encode(DEFAULT_ADMIN_ACCOUNT.adminPwd),
-          userDesc: base64url.encode("管理员账户用于创建模板"),
-          email: "2783956045@qq.com",
-          isAdmin: true,
-        });
-
-        const temp = {
-          userName: base64url.decode(respCreatedAdmin.userName),
-          userPwd: base64url.decode(respCreatedAdmin.userPwd),
-          userDesc: base64url.decode(respCreatedAdmin.userDesc),
-          email: "2783956045@qq.com",
-          isAdmin: true,
-        };
-        console.log("获取管理员信息成功 ==", temp);
-        new Result(temp, "获取管理员信息成功").success(res);
-      }
     } catch (err) {
       console.log("getAdmin err:==", err);
       new Result("查询管理员错误").fail(res);
@@ -130,18 +134,91 @@ module.exports = (router, mongodbConnection, NormalUserTable) => {
     }
   });
 
+  /* 验证码登录 */
+  router.post("/user/captchaLogin", async (req, res) => {
+    // console.log("login", req.body.userName);
+    if (req.body.email && req.body.code) {
+      const { email, code } = req.body;
+      /* get user info from db */
+      const userRes = await findDoc(NormalUserTable, { email: email });
+      const codeRes = await findDoc(CaptchaTable, { email: email });
+      const nowT = moment();
+      // console.log(nowT.valueOf(), code, codeRes[0], code === codeRes[0].code);
+      if (nowT.valueOf() > codeRes[0].failureTime) {
+        new Result("验证码过期").fail(res);
+      } else {
+        if (Number(code) === codeRes[0].code) {
+          if (userRes.length > 0) {
+            new Result("登录成功").success(res);
+          } else {
+            new Result({ isNewUser: true }, "登录成功").success(res);
+          }
+        } else {
+          new Result("验证码错误").fail(res);
+        }
+      }
+    } else {
+      new Result("验证码登录错误").fail(res);
+    }
+  });
+
   /* 发送验证码 */
   router.post("/user/sendCaptcha", (req, res) => {
     // console.log("发送验证码", req.body.mail);
     if (req.body.email) {
       const { email } = req.body;
       // console.log(email);
-      Captcha(email, (result) => {
-        // console.log("发送==========", result);
-        if (result.isSend) {
-          new Result("发送成功").success(res);
-        } else {
-          new Result("发送失败,请输入正确邮箱").fail(res);
+      sendCode(email, (result) => {
+        // console.log("发送==========", result.captchaNum);
+
+        try {
+          if (result.isSend) {
+            findDoc(CaptchaTable, {
+              email,
+            }).then((respCaptchaArray) => {
+              if (respCaptchaArray.length > 0) {
+                // console.log("respAdminInfoArray[0]", respAdminInfoArray[0]);
+
+                const temp = {
+                  effectiveTime: moment(),
+                  failureTime: moment().add(5, "m"),
+                  code: result.captchaNum,
+                };
+                console.log("update---------", temp);
+                updateDocOne(CaptchaTable, { email }, temp)
+                  .then(() => {
+                    // console.log("updateDocOne", respCaptchaArray);
+                    new Result("发送成功,验证码5分钟内有效").success(res);
+                  })
+                  .catch((err) => {
+                    console.error("updateDocOne error:==", err);
+                    new Result("发送失败").fail(res);
+                  });
+              } else {
+                /* create it */
+                const temp = {
+                  effectiveTime: moment(),
+                  failureTime: moment().add(5, "m"),
+                  code: result.captchaNum,
+                };
+                console.log("insert-----------", temp);
+                insertDoc(CaptchaTable, temp)
+                  .then(() => {
+                    // console.log("插入验证码 ==", respCaptchaArray);
+                    new Result("发送成功,验证码5分钟内有效").success(res);
+                  })
+                  .catch((err) => {
+                    console.error("updateDocOne error:==", err);
+                    new Result("发送失败").fail(res);
+                  });
+              }
+            });
+          } else {
+            new Result("发送失败,请输入正确邮箱").fail(res);
+          }
+        } catch (err) {
+          console.log(err);
+          new Result("发送失败").fail(res);
         }
       });
     } else {
@@ -228,6 +305,33 @@ module.exports = (router, mongodbConnection, NormalUserTable) => {
     } catch (err) {
       console.log("getAllNormalUser err:==", err);
       new Result("查询普通用户错误", "查询普通用户错误").success(res);
+    }
+  });
+
+  /* 测试 */
+  router.get("/user/testUpdate", (req, res) => {
+    try {
+      const temp = {
+        effectiveTime: moment(),
+        failureTime: moment().add(5, "m"),
+        code: 22222,
+      };
+      updateDocOne(CaptchaTable, { email: "1149450846@qq.com" }, temp).then(
+        (resUpdateInfo) => {
+          console.log("return -========", resUpdateInfo);
+
+          findDoc(CaptchaTable, { email: "1149450846@qq.com" }).then(
+            (findRes) => {
+              console.log("find return =====", findRes);
+            }
+          );
+        }
+      );
+
+      new Result("更新成功", "更新成功").success(res);
+    } catch (err) {
+      console.log("测试更新 err:==", err);
+      new Result("更新错误", "更新错误").success(res);
     }
   });
 };

@@ -44,13 +44,30 @@ module.exports = {
    * 简单查询，基于简单的json格式条件
    * @param {已经实例化的表(名)} Table required
    * @param {查询条件-id} _id
-   * @param {待更新数据json格式} jsonData
+   * @param {待更新数据json格式} updateData
    */
   updateDocById: (Table, id, updateData) =>
     new Promise((resolve, reject) => {
       Table.findByIdAndUpdate(id, updateData, {
         new: true, // return the updated doc
       }).exec((err, resp) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(resp);
+        }
+      });
+    }),
+  /**
+   * 更新条件更新
+   * @param {已经实例化的表(名)} Table required
+   * @param {查询条件} keys
+   * @param {待更新数据json格式} updateData
+   */
+  updateDocOne: (Table, keys, updateData) =>
+    new Promise((resolve, reject) => {
+      console.log(keys, updateData);
+      Table.updateOne(keys, { $set: updateData }).exec((err, resp) => {
         if (err) {
           reject(err);
         } else {

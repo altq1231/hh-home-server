@@ -13,6 +13,20 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 module.exports = {
+  NormalUserSchema: new Schema({
+    userName: String,
+    userPwd: String,
+    userDesc: String,
+    isAdmin: Boolean,
+    email: String,
+  }),
+  CaptchaSchema: new Schema({
+    userName: String,
+    email: String,
+    code: Number,
+    effectiveTime: String,
+    failureTime: String,
+  }),
   DataSourceSchema: new Schema({
     name: String,
     type: String,
@@ -29,12 +43,6 @@ module.exports = {
     quotaDataSource: String,
     apiOrSqlString: String,
     apiOrSqlOrStaticResultData: Schema.Types.Mixed,
-  }),
-  NormalUserSchema: new Schema({
-    userName: String,
-    userPwd: String,
-    userDesc: String,
-    isAdmin: Boolean,
   }),
   ScreenSchema: new Schema({
     name: String,

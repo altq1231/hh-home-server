@@ -303,8 +303,8 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                 // console.log("respAdminInfoArray[0]", respAdminInfoArray[0]);
 
                 const temp = {
-                  effectiveTime: moment(),
-                  failureTime: moment().add(5, "m"),
+                  effectiveTime: moment().valueOf(),
+                  failureTime: moment().add(5, "m").valueOf(),
                   code: result.captchaNum,
                 };
                 // console.log("update---------", temp);
@@ -321,8 +321,8 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                 /* create it */
                 const temp = {
                   email: email,
-                  effectiveTime: moment(),
-                  failureTime: moment().add(5, "m"),
+                  effectiveTime: moment().valueOf(),
+                  failureTime: moment().add(5, "m").valueOf(),
                   code: result.captchaNum,
                 };
                 // console.log("insert-----------", temp);

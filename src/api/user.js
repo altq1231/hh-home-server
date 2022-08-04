@@ -252,10 +252,14 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
               if (userRes.length > 0) {
                 // console.log("updateDocOne", respCaptchaArray);
                 const { userName, isAdmin, _id } = userRes[0];
-                new Result(
-                  { userName: userName, isAdmin, _id },
-                  "登录成功"
-                ).success(res);
+                if (userName === "") {
+                  new Result({ _id, isNewUser: true }, "登录成功").success(res);
+                } else {
+                  new Result(
+                    { userName: userName, isAdmin, _id },
+                    "登录成功"
+                  ).success(res);
+                }
               } else {
                 const userInfo = {
                   userName: "",
@@ -369,6 +373,13 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
 
   /* 用户登出清除 cookie */
   router.get("/user/logout", (req, res) => {
+    // console.log('req.cookies.jwtToken:==', req.cookies.jwtToken);
+    res.clearCookie("jwtToken");
+    new Result("登出成功").success(res);
+  });
+
+  /* 第一次验证码登录更新信息 */
+  router.post("/user/first-update", (req, res) => {
     // console.log('req.cookies.jwtToken:==', req.cookies.jwtToken);
     res.clearCookie("jwtToken");
     new Result("登出成功").success(res);

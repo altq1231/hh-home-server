@@ -82,7 +82,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
 
       const codeRes = await findDoc(CaptchaTable, { email: email });
       const nowT = moment();
-      console.log(nowT.valueOf(), code, codeRes[0], code === codeRes[0].code);
+      // console.log(nowT.valueOf(), code, codeRes[0], code === codeRes[0].code);
       if (nowT.valueOf() > codeRes[0].failureTime) {
         new Result("验证码过期").fail(res);
       } else {

@@ -33,9 +33,11 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
             userName: base64url.decode(respAdminInfoArray[0].userName),
             userPwd: base64url.decode(respAdminInfoArray[0].userPwd),
             userDesc: base64url.decode(respAdminInfoArray[0].userDesc),
+            _id: respCreatedAdmin._id,
             email: respAdminInfoArray[0].email,
             isAdmin: respAdminInfoArray[0].isAdmin,
           };
+          console.log("获取管理员信息成功 ==", temp);
           new Result(temp, "获取管理员信息成功").success(res);
         } else {
           /* create it */
@@ -51,9 +53,10 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
               userPwd: base64url.decode(respCreatedAdmin.userPwd),
               userDesc: base64url.decode(respCreatedAdmin.userDesc),
               email: "2783956045@qq.com",
+              _id: respCreatedAdmin._id,
               isAdmin: true,
             };
-            console.log("获取管理员信息成功 ==", temp);
+            console.log("插入管理员信息成功 ==", temp);
             new Result(temp, "获取管理员信息成功").success(res);
           });
         }
@@ -61,6 +64,30 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
     } catch (err) {
       console.log("getAdmin err:==", err);
       new Result("查询管理员错误").fail(res);
+    }
+  });
+
+  /* 创建普通用户 */
+  router.post("/user/createNormalUser", async (req, res) => {
+    try {
+      const { userName, userPwd, userDesc, email } = req.body;
+      const userInfo = {
+        userName: base64url.encode(userName),
+        userPwd: base64url.encode(userPwd),
+        userDesc: base64url.encode(userDesc),
+        email: email,
+        isAdmin: false,
+      };
+      const respNorUser = await insertDoc(NormalUserTable, userInfo);
+      const respNorUserData = Object.assign({}, userInfo, {
+        _id: respNorUser._id,
+      });
+
+      new Result(respNorUserData, "添加普通用户成功").success(res);
+    } catch (err) {
+      console.error("createNormalUser error:==", err);
+
+      new Result("fail", "创建普通用户失败").fail(res);
     }
   });
 
@@ -148,17 +175,35 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
         new Result("验证码过期").fail(res);
       } else {
         if (Number(code) === codeRes[0].code) {
-          if (userRes.length > 0) {
-            new Result("登录成功").success(res);
-          } else {
-            new Result({ isNewUser: true }, "登录成功").success(res);
-          }
+          const temp = {
+            failureTime: moment(),
+          };
+          96;
+          // console.log("update---------", userRes);
+          updateDocOne(CaptchaTable, { email }, temp)
+            .then(() => {
+              if (userRes.length > 0) {
+                // console.log("updateDocOne", respCaptchaArray);
+                const { userName, isAdmin, _id } = userRes[0];
+                const postName = base64url.decode(userName);
+                new Result(
+                  { userName: postName, isAdmin, _id },
+                  "登录成功"
+                ).success(res);
+              } else {
+                new Result({ isNewUser: true }, "登录成功").success(res);
+              }
+            })
+            .catch((err) => {
+              console.error("过期验证码 error:==", err);
+              new Result("验证码错误").fail(res);
+            });
         } else {
           new Result("验证码错误").fail(res);
         }
       }
     } else {
-      new Result("验证码登录错误").fail(res);
+      new Result("验证码登录错误,请确认邮箱地址跟验证码").fail(res);
     }
   });
 
@@ -184,7 +229,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                   failureTime: moment().add(5, "m"),
                   code: result.captchaNum,
                 };
-                console.log("update---------", temp);
+                // console.log("update---------", temp);
                 updateDocOne(CaptchaTable, { email }, temp)
                   .then(() => {
                     // console.log("updateDocOne", respCaptchaArray);
@@ -201,7 +246,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                   failureTime: moment().add(5, "m"),
                   code: result.captchaNum,
                 };
-                console.log("insert-----------", temp);
+                // console.log("insert-----------", temp);
                 insertDoc(CaptchaTable, temp)
                   .then(() => {
                     // console.log("插入验证码 ==", respCaptchaArray);
@@ -247,30 +292,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   router.get("/user/logout", (req, res) => {
     // console.log('req.cookies.jwtToken:==', req.cookies.jwtToken);
     res.clearCookie("jwtToken");
-    new Result("登出成功", "登出成功").success(res);
-  });
-
-  /* 创建普通用户 */
-  router.post("/user/createNormalUser", async (req, res) => {
-    try {
-      const { userName, userPwd, userDesc } = req.body;
-      const userInfo = {
-        userName: base64url.encode(userName),
-        userPwd: base64url.encode(userPwd),
-        userDesc: base64url.encode(userDesc),
-        isAdmin: false,
-      };
-      const respNorUser = await insertDoc(NormalUserTable, userInfo);
-      const respNorUserData = Object.assign({}, userInfo, {
-        _id: respNorUser._id,
-      });
-
-      new Result(respNorUserData, "添加普通用户成功").success(res);
-    } catch (err) {
-      console.error("createNormalUser error:==", err);
-
-      new Result("fail", "创建普通用户失败").fail(res);
-    }
+    new Result("登出成功").success(res);
   });
 
   /* 验证普通用户 */

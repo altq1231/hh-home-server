@@ -66,7 +66,6 @@ module.exports = {
    */
   updateDocOne: (Table, keys, updateData) =>
     new Promise((resolve, reject) => {
-      console.log(keys, updateData);
       Table.updateOne(keys, { $set: updateData }).exec((err, resp) => {
         if (err) {
           reject(err);

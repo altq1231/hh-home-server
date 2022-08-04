@@ -191,7 +191,19 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                   "登录成功"
                 ).success(res);
               } else {
-                new Result({ isNewUser: true }, "登录成功").success(res);
+                const userInfo = {
+                  userName: "",
+                  userPwd: "",
+                  userDesc: "",
+                  email: email,
+                  isAdmin: false,
+                };
+                insertDoc(NormalUserTable, userInfo).then((respNorUser) => {
+                  new Result(
+                    { _id: respNorUser._id, isNewUser: true },
+                    "登录成功"
+                  ).success(res);
+                });
               }
             })
             .catch((err) => {
@@ -242,6 +254,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
               } else {
                 /* create it */
                 const temp = {
+                  email: email,
                   effectiveTime: moment(),
                   failureTime: moment().add(5, "m"),
                   code: result.captchaNum,

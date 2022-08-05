@@ -169,6 +169,8 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
           user.userName = item.userName;
           user.userPwd = item.userPwd;
           user.userDesc = item.userDesc;
+          user.email = item.email;
+          user.isAdmin = item.isAdmin;
           return user;
         });
         console.log("获取所有用户 ==", temp);

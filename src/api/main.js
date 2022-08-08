@@ -1,8 +1,13 @@
 const router = require("express").Router();
 const connectSelfMongodb = require("../mongodb/index.js");
-const { NormalUserSchema, CaptchaSchema } = require("../mongodb/schema.js");
+const {
+  NormalUserSchema,
+  CaptchaSchema,
+  CityCodeSchema,
+} = require("../mongodb/schema.js");
 
 const UserApi = require("./user.js");
+const CityCodeApi = require("./cityCode.js");
 
 module.exports = (httpServer) => {
   let mongodbConnection;
@@ -18,11 +23,12 @@ module.exports = (httpServer) => {
       );
       // CaptchaTable = mongodbConnection.model("CaptchaTable", CaptchaSchema);
       CaptchaTable = mongodbConnection.model("CaptchaTable", CaptchaSchema);
+      CityCodeTable = mongodbConnection.model("CityCodeTable", CityCodeSchema);
       /* createWSS  */
       // createWSS(httpServer);
 
       UserApi(router, mongodbConnection, NormalUserTable, CaptchaTable);
-      // UserApi(router, mongodbConnection, CaptchaTable);
+      CityCodeApi(router, mongodbConnection, CityCodeTable);
     })
     .catch((err) => {
       console.log("连接自身用 Mongodb 错误:==\n", err);

@@ -27,6 +27,11 @@ module.exports = {
     effectiveTime: String,
     failureTime: String,
   }),
+  CityCodeSchema: new Schema({
+    cityName: String,
+    cityCode: String,
+    adCode: String,
+  }),
   DataSourceSchema: new Schema({
     name: String,
     type: String,

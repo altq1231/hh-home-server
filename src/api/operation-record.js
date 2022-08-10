@@ -48,7 +48,7 @@ module.exports = (router, mongodbConnection, OperationRecordTable) => {
       const { operationDate, manageType, operationType, userId, operationObj } =
         req.body;
       const recordInfo = {
-        operationDate: moment().valueOf(),
+        operationDate: moment(),
         manageType,
         operationType,
         userId,

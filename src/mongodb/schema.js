@@ -34,7 +34,7 @@ module.exports = {
   }),
   OperationRecordSchema: new Schema({
     userId: String,
-    operationDate: String,
+    operationDate: Date,
     manageType: "shop" | "video" | "music",
     operationType: "add" | "delete" | "update",
     operationObj: String,

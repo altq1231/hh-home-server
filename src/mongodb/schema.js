@@ -32,6 +32,13 @@ module.exports = {
     cityCode: String,
     adCode: String,
   }),
+  OperationRecordSchema: new Schema({
+    userId: String,
+    operationDate: String,
+    manageType: "shop" | "video" | "music",
+    operationType: "add" | "delete" | "update",
+    operationObj: String,
+  }),
   DataSourceSchema: new Schema({
     name: String,
     type: String,

@@ -3,6 +3,9 @@ const jwtSalt = "blog";
 const base64url = require("base64url");
 const Result = require("./status-handle.js");
 const moment = require("moment");
+const busboy = require("busboy");
+const path = require("path");
+const fs = require("fs");
 
 const sendCode = require("../utils/captcha");
 
@@ -456,6 +459,41 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
     } catch (err) {
       console.log("测试更新 err:==", err);
       new Result("更新错误", "更新错误").success(res);
+    }
+  });
+
+  /* uploadImageOrVideo */
+  router.post("/uploadImageOrVideo", (req, res) => {
+    try {
+      const bb = busboy({ headers: req.headers });
+      bb.on("file", (fieldName, file, info) => {
+        console.log("uploadImageOrVideo", fieldName, info);
+        // const saveTo = path.join(
+        //   __dirname,
+        //   `../../static/upload/${fieldName}/${info.filename}`
+        // );
+        const saveTo = path.join(
+          __dirname,
+          `../../static/upload/${fieldName}/${info.filename.replace(
+            /\s*/gi,
+            ""
+          )}`
+        );
+        console.log("path", saveTo);
+        file.pipe(fs.createWriteStream(saveTo));
+      });
+      bb.on("field", (name, val, info) => {
+        console.log(`Field [${name}]: value: %j`, val);
+        new Result(`Field [${name}]: value: %j`, val, "文件上传失败").fail(res);
+      });
+      bb.on("close", () => {
+        console.log("上传文件-保存文件成功");
+        new Result("文件上传成功").success(res);
+      });
+      req.pipe(bb);
+    } catch (err) {
+      console.log("uploadImageOrVideo", err);
+      new Result("文件上传失败").fail(res);
     }
   });
 };

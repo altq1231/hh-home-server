@@ -6,6 +6,8 @@ const moment = require("moment");
 const busboy = require("busboy");
 const path = require("path");
 const fs = require("fs");
+const ip = require("ip");
+const port = process.env.PORT || 3301;
 
 const sendCode = require("../utils/captcha");
 
@@ -466,6 +468,11 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   router.post("/uploadImageOrVideo", (req, res) => {
     try {
       const bb = busboy({ headers: req.headers });
+      let resInfo = {
+        name: "",
+        type: "",
+        path: "",
+      };
       bb.on("file", (fieldName, file, info) => {
         console.log("uploadImageOrVideo", fieldName, info);
         // const saveTo = path.join(
@@ -479,6 +486,12 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
             ""
           )}`
         );
+        resInfo.name = info.filename;
+        resInfo.type = fieldName;
+        resInfo.path = `http://${ip.address()}:${port}/static/upload/${fieldName}/${
+          info.filename
+        }`;
+
         console.log("path", saveTo);
         file.pipe(fs.createWriteStream(saveTo));
       });
@@ -486,9 +499,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
         console.log(`Field [${name}]: value: %j`, val);
         new Result(`Field [${name}]: value: %j`, val, "文件上传失败").fail(res);
       });
-      bb.on("close", () => {
+      bb.on("close", (fieldName, file, info) => {
         console.log("上传文件-保存文件成功");
-        new Result("文件上传成功").success(res);
+        new Result(resInfo, "文件上传成功").success(res);
       });
       req.pipe(bb);
     } catch (err) {

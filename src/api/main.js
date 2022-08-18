@@ -10,6 +10,7 @@ const {
 const UserApi = require("./user.js");
 const CityCodeApi = require("./city-code.js");
 const OperationRecordApi = require("./operation-record.js");
+const createWssApi = require('../websocket/index.js')
 
 module.exports = (httpServer) => {
   let mongodbConnection;
@@ -31,8 +32,8 @@ module.exports = (httpServer) => {
         "OperationRecordTable",
         OperationRecordSchema
       );
-      /* createWSS  */
-      // createWSS(httpServer);
+      /* createWebsocketServer  */
+      createWssApi(httpServer);
 
       UserApi(router, mongodbConnection, NormalUserTable, CaptchaTable);
       CityCodeApi(router, mongodbConnection, CityCodeTable);

@@ -6,19 +6,26 @@ const port = process.env.PORT || 3301;
 
 const baseUrl = `http://${ip.address()}:${port}`;
 
-function removeSameItemConcat(arr, batch) {
-  if (!Array.isArray(arr)) {
-    return arr;
+function getItemIndex(arr, key) {
+  let temp = null
+  arr.map((item, index) => {
+    if (item.id === key) {
+      temp = index
+    }
+  })
+  return temp
+}
+
+function removeSameItemConcat(arr, data) {
+  const userIndex = getItemIndex(arr, data.id)
+
+  if (userIndex && userIndex >= 0) {
+    arr[userIndex] = data
+  } else {
+    arr.push(data)
   }
-  if (arr.length == 0) {
-    return [];
-  }
-  let obj = {};
-  let uniqueArr = arr.reduce(function (total, item) {
-    obj[item[batch]] ? '' : (obj[item[batch]] = true && total.push(item));
-    return total;
-  }, []);
-  return uniqueArr;
+
+  return arr
 }
 
 module.exports = (httpServer) => {
@@ -34,19 +41,21 @@ module.exports = (httpServer) => {
 
     socket.emit("open", "sssssss");
     socket.on('login', (userInfo) => {
-      const temp = userList.concat([userInfo])
-      // userList = removeSameItemConcat(temp, userInfo.id)
-      userList = temp
-      console.log(userList);
+      userList = removeSameItemConcat(userList, userInfo)
+
+      console.log(userList, userInfo);
       wss.emit('userList', userList);
       // socket.emit(给该socket的客户端发送消息) + socket.broadcast.emit(发给所以客户端，不包括自己)  = wss.emit(给所有客户端广播消息)
     })
 
     socket.on("sendMsg", (data) => {
+      console.log(data);
+      // wss.to(data.id).emit('receiveMsg', data)
       socket.to(data.id).emit('receiveMsg', data)
     });
 
     socket.on('sendMsgGroup', (data) => {
+      // wss.to(data.roomId).emit('receiveMsgGroup', data);
       socket.to(data.roomId).emit('receiveMsgGroup', data);
     })
 

@@ -41,7 +41,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
               userName: respAdminInfoArray[0].userName,
               userPwd: respAdminInfoArray[0].userPwd,
               userDesc: respAdminInfoArray[0].userDesc,
-              _id: respCreatedAdmin._id,
+              _id: respAdminInfoArray[0]._id,
               email: respAdminInfoArray[0].email,
               isAdmin: respAdminInfoArray[0].isAdmin,
             };

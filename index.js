@@ -28,10 +28,15 @@ app.use(cors());
 app.use(compression());
 
 // parse application/x-www-form-urlencoded
-app.use(bodyParser.urlencoded({ limit: "2048mb", extended: false }));
+app.use(bodyParser.urlencoded({
+  limit: "2048mb",
+  extended: false
+}));
 
 // parse application/json
-app.use(bodyParser.json({ limit: "2048mb" }));
+app.use(bodyParser.json({
+  limit: "2048mb"
+}));
 /**
  * create http server for websocket using
  * otherwise we just use app server

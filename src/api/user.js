@@ -80,7 +80,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
       const reg = new RegExp(userName, "i");
       const regEmail = new RegExp(email, "i"); //不区分大小写
 
-      const codeRes = await findDoc(CaptchaTable, { email: email });
+      const codeRes = await findDoc(CaptchaTable, {
+        email: email
+      });
       const nowT = moment();
       // console.log(nowT.valueOf(), code, codeRes[0], code === codeRes[0].code);
       if (nowT.valueOf() > codeRes[0].failureTime) {
@@ -91,13 +93,23 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
             failureTime: moment(),
           };
           // console.log("update---------", userRes);
-          updateDocOne(CaptchaTable, { email }, temp)
+          updateDocOne(CaptchaTable, {
+              email
+            }, temp)
             .then(() => {
               findDoc(NormalUserTable, {
                 $or: [
                   //多条件，数组
-                  { userName: { $regex: reg } },
-                  { email: { $regex: regEmail } },
+                  {
+                    userName: {
+                      $regex: reg
+                    }
+                  },
+                  {
+                    email: {
+                      $regex: regEmail
+                    }
+                  },
                 ],
               }).then((respUserArray) => {
                 if (respUserArray.length > 0) {
@@ -109,12 +121,12 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                     isAdmin: respUserArray[0].isAdmin,
                   };
                   updateDocOne(
-                    NormalUserTable,
-                    { _id: respUserArray[0]._id },
+                    NormalUserTable, {
+                      _id: respUserArray[0]._id
+                    },
                     userInfo
                   ).then(() => {
-                    new Result(
-                      {
+                    new Result({
                         userName,
                         userPwd,
                         userDesc,
@@ -187,18 +199,26 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   router.post("/user/login", (req, res) => {
     // console.log("login", req.body.userName);
     if (req.body.userName && req.body.userPwd) {
-      const { userName, userPwd } = req.body;
+      const {
+        userName,
+        userPwd
+      } = req.body;
       const postName = userName;
       const postPwd = userPwd;
       /* get user info from db */
-      findDoc(NormalUserTable, { userName: postName })
+      findDoc(NormalUserTable, {
+          userName: postName
+        })
         .then((respUserArray) => {
           // console.log("login", userName, userPwd);
           if (respUserArray.length > 0) {
-            const { userPwd, isAdmin, _id } = respUserArray[0];
+            const {
+              userPwd,
+              isAdmin,
+              _id
+            } = respUserArray[0];
             if (postPwd === userPwd) {
-              const jwtToken = jwt.sign(
-                {
+              const jwtToken = jwt.sign({
                   _id,
                   userName,
                   isAdmin,
@@ -207,8 +227,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
               );
               res.cookie("jwtToken", jwtToken);
 
-              new Result(
-                {
+              new Result({
                   _id,
                   userName,
                   isAdmin,
@@ -235,10 +254,17 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   router.post("/user/captchaLogin", async (req, res) => {
     // console.log("login", req.body.userName);
     if (req.body.email && req.body.code) {
-      const { email, code } = req.body;
+      const {
+        email,
+        code
+      } = req.body;
       /* get user info from db */
-      const userRes = await findDoc(NormalUserTable, { email: email });
-      const codeRes = await findDoc(CaptchaTable, { email: email });
+      const userRes = await findDoc(NormalUserTable, {
+        email: email
+      });
+      const codeRes = await findDoc(CaptchaTable, {
+        email: email
+      });
       const nowT = moment();
       // console.log(nowT.valueOf(), code, codeRes[0], code === codeRes[0].code);
       if (nowT.valueOf() > codeRes[0].failureTime) {
@@ -249,16 +275,28 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
             failureTime: moment(),
           };
           // console.log("update---------", userRes);
-          updateDocOne(CaptchaTable, { email }, temp)
+          updateDocOne(CaptchaTable, {
+              email
+            }, temp)
             .then(() => {
               if (userRes.length > 0) {
                 // console.log("updateDocOne", respCaptchaArray);
-                const { userName, isAdmin, _id } = userRes[0];
+                const {
+                  userName,
+                  isAdmin,
+                  _id
+                } = userRes[0];
                 if (userName === "") {
-                  new Result({ _id, isNewUser: true }, "登录成功").success(res);
+                  new Result({
+                    _id,
+                    isNewUser: true
+                  }, "登录成功").success(res);
                 } else {
-                  new Result(
-                    { userName: userName, isAdmin, _id },
+                  new Result({
+                      userName: userName,
+                      isAdmin,
+                      _id
+                    },
                     "登录成功"
                   ).success(res);
                 }
@@ -271,8 +309,10 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                   isAdmin: false,
                 };
                 insertDoc(NormalUserTable, userInfo).then((respNorUser) => {
-                  new Result(
-                    { _id: respNorUser._id, isNewUser: true },
+                  new Result({
+                      _id: respNorUser._id,
+                      isNewUser: true
+                    },
                     "登录成功"
                   ).success(res);
                 });
@@ -295,7 +335,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   router.post("/user/sendCaptcha", (req, res) => {
     // console.log("发送验证码", req.body.mail);
     if (req.body.email) {
-      const { email } = req.body;
+      const {
+        email
+      } = req.body;
       // console.log(email);
       sendCode(email, (result) => {
         // console.log("发送==========", result.captchaNum);
@@ -314,7 +356,9 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
                   code: result.captchaNum,
                 };
                 // console.log("update---------", temp);
-                updateDocOne(CaptchaTable, { email }, temp)
+                updateDocOne(CaptchaTable, {
+                    email
+                  }, temp)
                   .then(() => {
                     // console.log("updateDocOne", respCaptchaArray);
                     new Result("发送成功,验证码5分钟内有效").success(res);
@@ -383,13 +427,27 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   /* 第一次验证码登录更新信息 */
   router.post("/user/improveUserInfo", (req, res) => {
     try {
-      const { userName, userPwd, _id, email } = req.body;
+      const {
+        userName,
+        userPwd,
+        _id,
+        email
+      } = req.body;
       console.log(userName, userPwd, _id);
 
-      updateDocOne(NormalUserTable, { _id, email }, { userName, userPwd }).then(
+      updateDocOne(NormalUserTable, {
+        _id,
+        email
+      }, {
+        userName,
+        userPwd
+      }).then(
         (updateResInfo) => {
           console.log("完善=======", updateResInfo);
-          new Result({ _id, userName }, "完善成功").success(res);
+          new Result({
+            _id,
+            userName
+          }, "完善成功").success(res);
         }
       );
     } catch (err) {
@@ -401,13 +459,20 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
   router.post("/user/modifyNormalUser", async (req, res) => {
     try {
       // console.log('modifyNormalUser req.body:==', req.body);
-      const { userName, userPwd, userDesc, _id } = req.body;
+      const {
+        userName,
+        userPwd,
+        userDesc,
+        _id
+      } = req.body;
       const userInfo = {
         userName: userName,
         userPwd: userPwd,
         userDesc: userDesc,
       };
-      await updateDocById(NormalUserTable, { _id }, userInfo);
+      await updateDocById(NormalUserTable, {
+        _id
+      }, userInfo);
 
       new Result("success", "修改普通用户信息成功").success(res);
     } catch (err) {
@@ -440,11 +505,15 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
         failureTime: moment().add(5, "m"),
         code: 22222,
       };
-      updateDocOne(CaptchaTable, { email: "1149450846@qq.com" }, temp).then(
+      updateDocOne(CaptchaTable, {
+        email: "1149450846@qq.com"
+      }, temp).then(
         (resUpdateInfo) => {
           console.log("return -========", resUpdateInfo);
 
-          findDoc(CaptchaTable, { email: "1149450846@qq.com" }).then(
+          findDoc(CaptchaTable, {
+            email: "1149450846@qq.com"
+          }).then(
             (findRes) => {
               console.log("find return =====", findRes);
             }

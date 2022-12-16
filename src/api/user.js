@@ -527,4 +527,52 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
       new Result("更新错误", "更新错误").success(res);
     }
   });
+
+  /* uploadImageOrVideo */
+  router.post("/uploadImageOrVideo", (req, res) => {
+    try {
+      const bb = busboy({
+        headers: req.headers
+      });
+      let resInfo = {
+        name: "",
+        type: "",
+        path: "",
+      };
+      bb.on("file", (fieldName, file, info) => {
+        console.log("uploadImageOrVideo", fieldName, info);
+        // const saveTo = path.join(
+        //   __dirname,
+        //   `../../static/upload/${fieldName}/${info.filename}`
+        // );
+        const uuidName = uuidv4()
+        const extname = info.mimeType.split('/')[1]
+        const keepName = uuidName + '.' + extname
+        const saveTo = path.join(
+          __dirname,
+          `../../static/upload/${fieldName}/${keepName}`
+        );
+
+        resInfo.name = info.filename;
+        resInfo.type = fieldName;
+        resInfo.path = `http://${ip.address()}:${port}/static/upload/${fieldName}/${keepName}`;
+
+        console.log('keepName', keepName);
+
+        file.pipe(fs.createWriteStream(saveTo));
+      });
+      bb.on("field", (name, val, info) => {
+        console.log(`Field [${name}]: value: %j`, val);
+        new Result(`Field [${name}]: value: %j`, val, "文件上传失败").fail(res);
+      });
+      bb.on("close", (fieldName, file, info) => {
+        console.log("上传文件-保存文件成功");
+        new Result(resInfo, "文件上传成功").success(res);
+      });
+      req.pipe(bb);
+    } catch (err) {
+      console.log("uploadImageOrVideo", err);
+      new Result("文件上传失败").fail(res);
+    }
+  });
 };

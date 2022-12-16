@@ -10,7 +10,9 @@ Array       数组
  */
 const mongoose = require("mongoose");
 
-const { Schema } = mongoose;
+const {
+  Schema
+} = mongoose;
 
 module.exports = {
   NormalUserSchema: new Schema({
@@ -38,6 +40,17 @@ module.exports = {
     manageType: "shop" | "video" | "music",
     operationType: "add" | "delete" | "update",
     operationObj: String,
+  }),
+  GoodsSchema: new Schema({
+    goodsName: String,
+    goodsStatus: Number,
+    goodsStock: Number,
+    goodsPrice: Number,
+    goodsDesc: String,
+    sellingPrice: Number,
+    goodsTags: Array,
+    goodsDetails: String,
+    goodsMedia: Array,
   }),
   DataSourceSchema: new Schema({
     name: String,

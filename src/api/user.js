@@ -3,14 +3,6 @@ const jwtSalt = "blog";
 const base64url = require("base64url");
 const Result = require("./status-handle.js");
 const moment = require("moment");
-const busboy = require("busboy");
-const path = require("path");
-const fs = require("fs");
-const ip = require("ip");
-const port = process.env.PORT || 3301;
-const {
-  v4: uuidv4
-} = require('uuid')
 
 const sendCode = require("../utils/captcha");
 
@@ -41,7 +33,7 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
             userName: respAdminInfoArray[0].userName,
             userPwd: respAdminInfoArray[0].userPwd,
             userDesc: respAdminInfoArray[0].userDesc,
-            _id: respCreatedAdmin._id,
+            _id: respAdminInfoArray[0]._id,
             email: respAdminInfoArray[0].email,
             isAdmin: respAdminInfoArray[0].isAdmin,
           };
@@ -533,54 +525,6 @@ module.exports = (router, mongodbConnection, NormalUserTable, CaptchaTable) => {
     } catch (err) {
       console.log("测试更新 err:==", err);
       new Result("更新错误", "更新错误").success(res);
-    }
-  });
-
-  /* uploadImageOrVideo */
-  router.post("/uploadImageOrVideo", (req, res) => {
-    try {
-      const bb = busboy({
-        headers: req.headers
-      });
-      let resInfo = {
-        name: "",
-        type: "",
-        path: "",
-      };
-      bb.on("file", (fieldName, file, info) => {
-        console.log("uploadImageOrVideo", fieldName, info);
-        // const saveTo = path.join(
-        //   __dirname,
-        //   `../../static/upload/${fieldName}/${info.filename}`
-        // );
-        const uuidName = uuidv4()
-        const extname = info.mimeType.split('/')[1]
-        const keepName = uuidName + '.' + extname
-        const saveTo = path.join(
-          __dirname,
-          `../../static/upload/${fieldName}/${keepName}`
-        );
-
-        resInfo.name = info.filename;
-        resInfo.type = fieldName;
-        resInfo.path = `http://${ip.address()}:${port}/static/upload/${fieldName}/${keepName}`;
-
-        console.log('keepName', keepName);
-
-        file.pipe(fs.createWriteStream(saveTo));
-      });
-      bb.on("field", (name, val, info) => {
-        console.log(`Field [${name}]: value: %j`, val);
-        new Result(`Field [${name}]: value: %j`, val, "文件上传失败").fail(res);
-      });
-      bb.on("close", (fieldName, file, info) => {
-        console.log("上传文件-保存文件成功");
-        new Result(resInfo, "文件上传成功").success(res);
-      });
-      req.pipe(bb);
-    } catch (err) {
-      console.log("uploadImageOrVideo", err);
-      new Result("文件上传失败").fail(res);
     }
   });
 };
